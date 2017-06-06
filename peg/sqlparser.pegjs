@@ -816,10 +816,10 @@ literal_int "LITERAL INT"
   }
 
 number
-  = int_:int frac:frac exp:exp __ { return parseFloat(int_ + frac + exp); }
-  / int_:int frac:frac __         { return parseFloat(int_ + frac);       }
-  / int_:int exp:exp __           { return parseFloat(int_ + exp);        }
-  / int_:int __                   { return parseFloat(int_);              }
+  = int_:int frac:frac exp:exp __ { var x = parseFloat(int_ + frac + exp); return (x % 1 != 0) ? x.toString() : x.toString() + ".0"}
+  / int_:int frac:frac __         { var x = parseFloat(int_ + frac); return (x % 1 != 0) ? x.toString() : x.toString() + ".0"}
+  / int_:int exp:exp __           { return parseFloat(int_ + exp).toString(); }
+  / int_:int __                   { return parseFloat(int_).toString(); }
 
 int
   = digit19:digit19 digits:digits     { return digit19 + digits;       }

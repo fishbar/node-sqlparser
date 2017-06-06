@@ -13,7 +13,7 @@ describe('SQL select', function () {
 
   describe('check selected fields', function () {
     it('should return ok when simple fields', function () {
-      var sql = 'select custom(abc), def from a.tablename where custom(id) in (1, 2, 2, 3) and c = ?';
+      var sql = 'select custom(abc), def from a.tablename where custom(id) in (1.0, 2.1, 2, 3) and c = ?';
       var result = parser.parse(sql);
       var resSql = stringify(result);
       expect(result)
@@ -27,6 +27,15 @@ describe('SQL select', function () {
       expect(result)
         .type('select')
         .columns(['sum(abc,1)', 'def']);
+    });
+    it('should keep decimals in floats', function () {
+      var sql = 'select a from b where x = 1.0';
+      var result = parser.parse(sql);
+      var resSql = stringify(result);
+      expect(result)
+        .type('select')
+        .columns(['a']);
+      resSql.toLowerCase().should.equal(sql);
     });
     it('should ok when limit 10', function () {
       var sql = 'select a from b limit 10';

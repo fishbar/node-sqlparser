@@ -5,7 +5,7 @@
   ],
   "name": "node-sqlparser",
   "description": "a sql parser for node.js",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "repository": {
     "url": "git://github.com/alibaba/nquery.git"
   },

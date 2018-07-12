@@ -11,14 +11,6 @@
  */
 
 {
-  var util;
-  var inspect = function(){};
-  if (module && process && process.env) {
-    util = require('util');
-    inspect = function (obj) {
-      console.log(util.inspect(obj, false, 10));
-    }
-  }
   function debug(str) {
     console.log(str);
   }
@@ -155,7 +147,13 @@
 }
 
 start
-  = __ ast:(union_stmt  / update_stmt / replace_insert_stmt) {
+  = __ ast:(
+      union_stmt  /
+      update_stmt /
+      delete_stmt /
+      replace_insert_stmt /
+      create_table_stmt
+    ) {
       ast.params = params;
       return ast;
     }
@@ -172,6 +170,113 @@ union_stmt
       }
       return head;
     }
+
+create_table_stmt
+ = KW_CREATE __ KW_TABLE __ (KW_IF __ KW_NOT __ KW_EXISTS __) ?
+   tb: table_name __ '(' __
+    clist:columns_defs
+   __ ')' __ topt:table_options? __ popt:partition_options? __ ';'? __? {
+    return {
+      type: 'create_table',
+      name: tb,
+      columns: clist,
+      tableOptions: topt,
+      partitionOptions: popt
+    }
+  }
+
+columns_defs
+  = h:column_def t:(__ COMMA __ column_def)* {
+    return createList(h, t);
+  }
+
+column_def
+  = index_def /
+    (
+    n:column __
+    t:column_type
+    e:(__ (literal/ident_name))* {
+      let ext = [];
+      e.forEach((v) => {
+          ext.push(v[1]);
+      });
+      return {
+        name: n,
+        type: t,
+        ext: ext
+      }
+    }
+    )
+
+column_type
+  = ct: (func_call/ident) {
+    if (ct.type === 'function') {
+      let args = [];
+      ct.args.value.forEach((v) => {
+        args.push(v.value);
+      });
+      return {
+        type: ct.name,
+        args: args
+      }
+    } else {
+      return {type: ct}
+    }
+  }
+
+ table_options
+  = h:table_option t:(__ table_option)* {
+    let res = h;
+    t.forEach((v) => {
+        let tmp = v[1];
+      let keys = Object.keys(tmp)
+        keys.forEach((k) => {
+          res[k] = tmp[k].column;
+        });
+    });
+    return res;
+  }
+
+ table_option
+  = k:primary __ '='? __ v:primary {
+    let obj = {};
+    let key = k.type === 'column_ref' ? k.column : k.value;
+    let value = v.type === 'column_ref' ? v.column : v.value;
+    obj[key] = value;
+    return obj;
+  }
+
+partition_options
+ = h:primary t:(__ primary)* {
+   let res = [h];
+   t.forEach((v) => {
+    res.push(v);
+   });
+   return res;
+ }
+
+index_def
+ = f:$(ident_name* __ ('KEY'i/'INDEX'i)) __ n:column __ '(' l: column_clause ')'{
+   let list = [];
+   l.forEach((v) => {
+     list.push(v.expr.column)
+   });
+   return {
+     type: f,
+     name: n,
+     columns: list
+   }
+ }
+
+
+delete_stmt
+= KW_DELETE __ f:from_clause __ w:where_clause? {
+  return {
+    type: 'delete',
+    from: f,
+    where: w
+  }
+}
 
 select_stmt
   =  select_stmt_nake
@@ -274,7 +379,7 @@ join_op
   / (KW_INNER __)? KW_JOIN { return 'INNER JOIN'; }
 
 table_name
-  = dt:ident tail:(__ DOT __ ident_name)? {
+  = '`'? dt:ident tail:(__ DOT __ ident_name)? '`'? {
       var obj = {
         db : '',
         table : dt
@@ -429,12 +534,12 @@ expr_list
 
 expr_list_or_empty
   = l:expr_list
-  / {
+  / (''{
       return {
         type  : 'expr_list',
         value : []
       }
-    }
+    })
 
 /**
  * Borrowed from PL/SQL ,the priority of below list IS ORDER BY DESC
@@ -874,6 +979,7 @@ KW_JOIN     = "JOIN"i     !ident_start
 KW_UNION    = "UNION"i    !ident_start
 KW_VALUES   = "VALUES"i   !ident_start
 
+KW_IF       = "IF"i       !ident_start
 KW_EXISTS   = "EXISTS"i   !ident_start
 
 KW_WHERE    = "WHERE"i    !ident_start
@@ -942,7 +1048,7 @@ proc_stmt
       }
     }
 
-proc_init  = { varList = []; return true; }
+proc_init  = '' { varList = []; return true; }
 
 assign_stmt
   = va:var_decl __ KW_ASSIGN __ e:proc_expr {

@@ -15,12 +15,11 @@
   "engines": {
     "node": ">=0.8.0"
   },
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
-    "pegjs": "=0.8.0",
+    "pegjs": "0.10.0",
     "mocha": ">=1.0.0",
-    "should":">=1.2.0"
+    "should": ">=1.2.0"
   },
   "readmeFilename": "README.md",
   "main": "index.js",
@@ -32,5 +31,5 @@
     "sql ast",
     "custom sql"
   ],
-  "license": "GPLv2"
+  "license": "GPL-2.0"
 }
